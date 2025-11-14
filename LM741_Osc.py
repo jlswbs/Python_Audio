@@ -1,15 +1,15 @@
-# TL074 (opamp RC relaxation) oscillator
+# LM741 (opamp RC relaxation) oscillator
 
 import numpy as np
 from scipy.io.wavfile import write
 
 Vcc = 5.0
-Vhigh = 4.2
-Vlow  = 0.8
+Vhigh = 4.0
+Vlow  = 1.0
 
-GBW = 3e6
+GBW = 1e6
 A0 = 200000
-SR = 13e6
+SR = 0.5e6
 
 R_min = 5000
 R_max = 20000
@@ -89,4 +89,4 @@ for i in range(1, N):
     y[i] = alpha * out[i] + (1 - alpha) * y[i-1]
 
 audio = np.int16(y * 32767)
-write("tl074_relax_filtered.wav", fs, audio)
+write("lm741_relax_filtered.wav", fs, audio)
