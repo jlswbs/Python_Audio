@@ -1,14 +1,14 @@
-# TL074 (opamp RC relaxation) oscillator and filter
+# UA741 (opamp RC relaxation) oscillator and filter
 
 import numpy as np
 from scipy.io.wavfile import write
 
 Vcc = 5.0
-Vhigh = 4.2
-Vlow = 0.8
-GBW = 3e6
+Vhigh = 13.0
+Vlow = -13.0
+GBW = 1e6
 A0 = 200000
-SR = 13e6
+SR = 0.5e6
 
 R_min = 5000.0
 R_max = 20000.0
@@ -53,10 +53,7 @@ for i in range(N):
         fc = np.random.uniform(F_min, F_max)
         alpha = dt / (1/(2*np.pi*fc) + dt)
 
-    if out_state:
-        dVc = (Vcc - Vc[i-1]) / (R_current * C)
-    else:
-        dVc = (0 - Vc[i-1]) / (R_current * C)
+    dVc = (Vcc - Vc[i-1]) / (R_current * C) if out_state else (0 - Vc[i-1]) / (R_current * C)
     Vc[i] = Vc[i-1] + dVc * dt
 
     if out_state and Vc[i] >= VTH:
@@ -83,4 +80,4 @@ for i in range(N):
         y[i] = alpha * out[i] + (1 - alpha) * y[i-1]
 
 audio = np.int16(y * 32767)
-write("tl074_oscillator.wav", fs, audio)
+write("ua741_oscillator.wav", fs, audio)
