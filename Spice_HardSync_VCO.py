@@ -4,6 +4,8 @@ import numpy as np
 import random
 from scipy.io.wavfile import write
 
+random.seed(123)
+
 fs = 44100
 dt = 1.0/fs
 duration = 5.0
