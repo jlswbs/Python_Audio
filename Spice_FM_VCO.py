@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) AM oscillator
+# Spice NE5532 (opamp RC relaxation) FM oscillator
 
 import numpy as np
 import random
@@ -11,11 +11,13 @@ dt = 1.0/fs
 duration = 5.0
 N = int(duration*fs)
 
+# Carrier (A)
 C_A = 3.3e-8
 Rint_A = 8000.0
 tau_A = Rint_A * C_A
 RintA_min, RintA_max = 5000.0, 20000.0
 
+# Modulator (B)
 C_B = 3.3e-7
 Rint_B = 12000.0
 tau_B = Rint_B * C_B
@@ -67,7 +69,23 @@ for n in range(N):
         Rint_B = random.uniform(RintB_min, RintB_max)
         tau_B = Rint_B * C_B
 
-    Vc_A += dir_A * dt / tau_A
+    Vc_B += dir_B * dt / tau_B
+    if Vc_B >= 1.0:
+        Vc_B = 1.0
+        dir_B = -1
+    elif Vc_B <= -1.0:
+        Vc_B = -1.0
+        dir_B = +1
+
+    Vdiff_B = Vc_B + rng.normal(0.0, vnoise_rms)
+    dv_ol_B = omega_p*(A_ol_dc*Vdiff_B - v_ol_state_B)*dt
+    v_ol_state_B += dv_ol_B
+    Vsat_B = soft_saturation(v_ol_state_B, Vout_max, Vout_min, soft_sat_alpha)
+    Vout_B = limit_slew(Vsat_B, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
+
+    tau_A_eff = tau_A / (1.0 + mod_depth * Vout_B / Vout_max)
+
+    Vc_A += dir_A * dt / tau_A_eff
     if Vc_A >= 1.0:
         Vc_A = 1.0
         dir_A = -1
@@ -81,27 +99,13 @@ for n in range(N):
     Vsat_A = soft_saturation(v_ol_state_A, Vout_max, Vout_min, soft_sat_alpha)
     Vout_A = limit_slew(Vsat_A, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
 
-    Vc_B += dir_B * dt / tau_B
-    if Vc_B >= 1.0:
-        Vc_B = 1.0
-        dir_B = -1
-    elif Vc_B <= -1.0:
-        Vc_B = -1.0
-        dir_B = +1
-
-    Vdiff_B = Vc_B + rng.normal(0.0, vnoise_rms)
-    dv_ol_B = omega_p*(A_ol_dc*Vdiff_B - v_ol_state_B)*dt
-    v_ol_state_B += dv_ol_B
-    Vsat_B = soft_saturation(v_ol_state_B, Vout_max, Vout_min, soft_sat_alpha)
-    Vout_B = limit_slew(Vsat_B, Vout_A, dt, slew_rate)
-
     if use_square:
-       Vout_AM = (1.0 + mod_depth*Vout_B/Vout_max) * Vout_A
-       y_out[n] = np.float32(Vout_AM)      
+       amp_scale = Vout_max * 0.8
+       y_out[n] = np.float32(amp_scale * Vout_A)    
     else:
        amp_scale = Vout_max * 0.8
-       Vout_AM = (1.0 + mod_depth * Vc_B) * (amp_scale * Vc_A)
-       y_out[n] = np.float32(Vout_AM)
+       y_out[n] = np.float32(amp_scale * Vc_A)
+
 
 y_out *= 0.9/np.max(np.abs(y_out))
 
@@ -109,4 +113,4 @@ def float_to_pcm16(x):
     return np.int16(np.clip(x, -1.0, 1.0)*32767)
 
 audio = float_to_pcm16(y_out)
-write("am_opamp_vco.wav", fs, audio)
+write("fm_opamp_vco.wav", fs, audio)

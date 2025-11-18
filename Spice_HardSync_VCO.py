@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) Hard-Sync oscillator
+# Spice NE5532 (opamp RC relaxation) HardSync oscillator
 
 import numpy as np
 import random
@@ -44,6 +44,8 @@ y_out = np.zeros(N, dtype=np.float32)
 change_interval = 0.150
 samples_per_change = int(change_interval*fs)
 
+use_square = False
+
 def soft_saturation(v, vmax, vmin, alpha):
     center = 0.5*(vmax+vmin)
     span   = 0.5*(vmax-vmin)
@@ -64,11 +66,13 @@ for n in range(N):
     if Vc_master >= 1.0:
         Vc_master = 1.0
         dir_master = -1
+
         Vc_slave = -1.0
         dir_slave = +1
     elif Vc_master <= -1.0:
         Vc_master = -1.0
         dir_master = +1
+
         Vc_slave = -1.0
         dir_slave = +1
 
@@ -86,7 +90,11 @@ for n in range(N):
     Vsat = soft_saturation(v_ol_state_slave, Vout_max, Vout_min, soft_sat_alpha)
     Vout_slave = limit_slew(Vsat, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
 
-    y_out[n] = np.float32(Vout_slave)
+    if use_square:
+        y_out[n] = np.float32(Vout_slave)
+    else:
+        amp_scale = Vout_max * 0.8
+        y_out[n] = np.float32(amp_scale * Vc_slave)
 
 y_out *= 0.9/np.max(np.abs(y_out))
 

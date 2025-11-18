@@ -11,11 +11,11 @@ dt = 1.0/fs
 duration = 5.0
 N = int(duration*fs)
 
-C_A = 3.3e-7
+C_A = 3.3e-8
 Rint_A = 8000.0
 tau_A = Rint_A * C_A
 
-C_B = 3.3e-8
+C_B = 3.3e-7
 Rint_B = 12000.0
 tau_B = Rint_B * C_B
 Rint_min, Rint_max = 5000.0, 20000.0
@@ -44,6 +44,8 @@ y_out = np.zeros(N, dtype=np.float32)
 change_interval = 0.150
 samples_per_change = int(change_interval*fs)
 
+use_square = False
+
 def soft_saturation(v, vmax, vmin, alpha):
     center = 0.5*(vmax+vmin)
     span   = 0.5*(vmax-vmin)
@@ -57,6 +59,8 @@ def limit_slew(v_target, v_prev, dt, SR):
 
 for n in range(N):
     if n % samples_per_change == 0:
+        Rint_A = random.uniform(Rint_min, Rint_max)
+        tau_A = Rint_A * C_A
         Rint_B = random.uniform(Rint_min, Rint_max)
         tau_B = Rint_B * C_B
 
@@ -88,9 +92,11 @@ for n in range(N):
     Vsat_B = soft_saturation(v_ol_state_B, Vout_max, Vout_min, soft_sat_alpha)
     Vout_B = limit_slew(Vsat_B, Vout_A, dt, slew_rate)
 
-    Vout_ring = Vout_A * Vout_B
-
-    y_out[n] = np.float32(Vout_ring)
+    if use_square:
+        y_out[n] = np.float32(Vout_A * Vout_B)
+    else:
+        amp_scale = Vout_max * 0.8
+        y_out[n] = np.float32((amp_scale * Vc_A) * (amp_scale * Vc_B))
 
 y_out *= 0.9/np.max(np.abs(y_out))
 

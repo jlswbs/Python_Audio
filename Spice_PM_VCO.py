@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) AM oscillator
+# Spice NE5532 (opamp RC relaxation) PM oscillator
 
 import numpy as np
 import random
@@ -75,12 +75,6 @@ for n in range(N):
         Vc_A = -1.0
         dir_A = +1
 
-    Vdiff_A = Vc_A + rng.normal(0.0, vnoise_rms)
-    dv_ol_A = omega_p*(A_ol_dc*Vdiff_A - v_ol_state_A)*dt
-    v_ol_state_A += dv_ol_A
-    Vsat_A = soft_saturation(v_ol_state_A, Vout_max, Vout_min, soft_sat_alpha)
-    Vout_A = limit_slew(Vsat_A, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
-
     Vc_B += dir_B * dt / tau_B
     if Vc_B >= 1.0:
         Vc_B = 1.0
@@ -89,19 +83,22 @@ for n in range(N):
         Vc_B = -1.0
         dir_B = +1
 
-    Vdiff_B = Vc_B + rng.normal(0.0, vnoise_rms)
-    dv_ol_B = omega_p*(A_ol_dc*Vdiff_B - v_ol_state_B)*dt
-    v_ol_state_B += dv_ol_B
-    Vsat_B = soft_saturation(v_ol_state_B, Vout_max, Vout_min, soft_sat_alpha)
-    Vout_B = limit_slew(Vsat_B, Vout_A, dt, slew_rate)
+    phase_offset = mod_depth * Vc_B
+    Vc_PM = Vc_A + phase_offset
+
+    Vc_PM = np.clip(Vc_PM, -1.0, 1.0)
+
+    Vdiff_A = Vc_PM + rng.normal(0.0, vnoise_rms)
+    dv_ol_A = omega_p*(A_ol_dc*Vdiff_A - v_ol_state_A)*dt
+    v_ol_state_A += dv_ol_A
+    Vsat_A = soft_saturation(v_ol_state_A, Vout_max, Vout_min, soft_sat_alpha)
+    Vout_A = limit_slew(Vsat_A, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
 
     if use_square:
-       Vout_AM = (1.0 + mod_depth*Vout_B/Vout_max) * Vout_A
-       y_out[n] = np.float32(Vout_AM)      
+       y_out[n] = np.float32(Vout_A)   
     else:
        amp_scale = Vout_max * 0.8
-       Vout_AM = (1.0 + mod_depth * Vc_B) * (amp_scale * Vc_A)
-       y_out[n] = np.float32(Vout_AM)
+       y_out[n] = np.float32(amp_scale * Vc_PM)
 
 y_out *= 0.9/np.max(np.abs(y_out))
 
@@ -109,4 +106,4 @@ def float_to_pcm16(x):
     return np.int16(np.clip(x, -1.0, 1.0)*32767)
 
 audio = float_to_pcm16(y_out)
-write("am_opamp_vco.wav", fs, audio)
+write("pm_opamp_vco.wav", fs, audio)
