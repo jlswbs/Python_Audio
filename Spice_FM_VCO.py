@@ -11,13 +11,11 @@ dt = 1.0/fs
 duration = 5.0
 N = int(duration*fs)
 
-# Carrier (A)
 C_A = 3.3e-8
 Rint_A = 8000.0
 tau_A = Rint_A * C_A
 RintA_min, RintA_max = 5000.0, 20000.0
 
-# Modulator (B)
 C_B = 3.3e-7
 Rint_B = 12000.0
 tau_B = Rint_B * C_B
