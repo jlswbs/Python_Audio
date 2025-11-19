@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) PM (phase modulator) oscillator
+# Spice NE5532 (opamp RC relaxation) RM (ring modulator) oscillator
 
 import numpy as np
 import random
@@ -22,7 +22,7 @@ tau_B = Rint_B * C_B
 RintB_min, RintB_max = 5000.0, 20000.0
 
 A_ol_dc = 1e5
-f_pole = 500.0
+f_pole = 50.0
 omega_p = 2*np.pi*f_pole
 slew_rate = 9e6
 soft_sat_alpha = 0.45
@@ -44,8 +44,6 @@ y_out = np.zeros(N, dtype=np.float32)
 
 change_interval = 0.150
 samples_per_change = int(change_interval*fs)
-
-mod_depth = 0.5
 
 use_square = False
 
@@ -75,6 +73,12 @@ for n in range(N):
         Vc_A = -1.0
         dir_A = +1
 
+    Vdiff_A = Vc_A + rng.normal(0.0, vnoise_rms)
+    dv_ol_A = omega_p*(A_ol_dc*Vdiff_A - v_ol_state_A)*dt
+    v_ol_state_A += dv_ol_A
+    Vsat_A = soft_saturation(v_ol_state_A, Vout_max, Vout_min, soft_sat_alpha)
+    Vout_A = limit_slew(Vsat_A, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
+
     Vc_B += dir_B * dt / tau_B
     if Vc_B >= 1.0:
         Vc_B = 1.0
@@ -83,22 +87,17 @@ for n in range(N):
         Vc_B = -1.0
         dir_B = +1
 
-    phase_offset = mod_depth * Vc_B
-    Vc_PM = Vc_A + phase_offset
-
-    Vc_PM = np.clip(Vc_PM, -1.0, 1.0)
-
-    Vdiff_A = Vc_PM + rng.normal(0.0, vnoise_rms)
-    dv_ol_A = omega_p*(A_ol_dc*Vdiff_A - v_ol_state_A)*dt
-    v_ol_state_A += dv_ol_A
-    Vsat_A = soft_saturation(v_ol_state_A, Vout_max, Vout_min, soft_sat_alpha)
-    Vout_A = limit_slew(Vsat_A, y_out[n-1] if n>0 else 0.0, dt, slew_rate)
+    Vdiff_B = Vc_B + rng.normal(0.0, vnoise_rms)
+    dv_ol_B = omega_p*(A_ol_dc*Vdiff_B - v_ol_state_B)*dt
+    v_ol_state_B += dv_ol_B
+    Vsat_B = soft_saturation(v_ol_state_B, Vout_max, Vout_min, soft_sat_alpha)
+    Vout_B = limit_slew(Vsat_B, Vout_A, dt, slew_rate)
 
     if use_square:
-       y_out[n] = np.float32(Vout_A)   
+        y_out[n] = np.float32(Vout_A * Vout_B)
     else:
-       amp_scale = Vout_max * 0.8
-       y_out[n] = np.float32(amp_scale * Vc_PM)
+        amp_scale = Vout_max * 0.8
+        y_out[n] = np.float32((amp_scale * Vc_A) * (amp_scale * Vc_B))
 
 y_out *= 0.9/np.max(np.abs(y_out))
 
@@ -106,4 +105,4 @@ def float_to_pcm16(x):
     return np.int16(np.clip(x, -1.0, 1.0)*32767)
 
 audio = float_to_pcm16(y_out)
-write("pm_opamp_vco.wav", fs, audio)
+write("rm_opamp_vco.wav", fs, audio)

@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) HardSync oscillator
+# Spice NE5532 (opamp RC relaxation) Hard-Sync oscillator
 
 import numpy as np
 import random

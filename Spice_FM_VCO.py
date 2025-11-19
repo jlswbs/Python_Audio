@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) FM oscillator
+# Spice NE5532 (opamp RC relaxation) FM (frequency modulator) oscillator
 
 import numpy as np
 import random

@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) AM oscillator
+# Spice NE5532 (opamp RC relaxation) AM (amplitude modulator) oscillator
 
 import numpy as np
 import random

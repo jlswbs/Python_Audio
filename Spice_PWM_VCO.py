@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) PWM oscillator
+# Spice NE5532 (opamp RC relaxation) PWM (pulse width modulator) oscillator
 
 import numpy as np
 import struct, random
