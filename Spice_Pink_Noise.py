@@ -49,13 +49,31 @@ def limit_slew(v_target, v_prev, dt, SR):
 
 rng = np.random.default_rng(123)
 
-for n in range(N):
+k_B = 1.380649e-23
+T = 300.0
+delta_f = fs / 2.0
 
+v_noise_rms = np.sqrt(4 * k_B * T * R * delta_f)
+i_noise_rms = v_noise_rms / R
+
+b0, b1, b2 = 0.02109238, 0.07113478, 0.68873558
+c0, c1, c2 = 0.3190, 0.1830, 0.1190
+pink_state = np.zeros(3)
+
+def pink_filter(x):
+    global pink_state
+    pink_state[0] = 0.99765 * pink_state[0] + x * b0
+    pink_state[1] = 0.96300 * pink_state[1] + x * b1
+    pink_state[2] = 0.57000 * pink_state[2] + x * b2
+    return pink_state.sum() + x * (c0 + c1 + c2)
+
+for n in range(N):
     if n % samples_per_change == 0:
         C = random.uniform(C_min, C_max)
         tau = R * C
 
-    inoise = rng.normal(0.0, 1.0e-9)
+    inoise_white = rng.normal(0.0, i_noise_rms)
+    inoise = pink_filter(inoise_white)
 
     Vc += (inoise * R - Vc) / tau * dt
 
@@ -77,4 +95,4 @@ def float_to_pcm16(x):
 
 audio = float_to_pcm16(y_out)
 
-write("opamp_noise.wav", fs, audio)
+write("opamp_pink_noise.wav", fs, audio)
