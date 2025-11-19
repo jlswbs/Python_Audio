@@ -1,4 +1,4 @@
-# Spice NE5532 (opamp RC relaxation) FM (frequency modulator) oscillator with varicap
+# Spice NE5532 (opamp RC relaxation) PM (phase modulator) oscillator with varicap
 
 import numpy as np
 import random
@@ -11,8 +11,6 @@ dt = 1.0/fs
 duration = 5.0
 N = int(duration*fs)
 
-RintA_min, RintA_max = 5000.0, 20000.0
-Rint_A = 8000.0
 C0_A   = 3.3e-8
 Vj_A   = 0.8
 m_A    = 0.5
@@ -20,6 +18,9 @@ Cmin_A = 0.5*C0_A
 Cmax_A = 1.5*C0_A
 bias_offset = 2.0
 mod_gain    = 1.5
+
+RintA_min, RintA_max = 5000.0, 20000.0
+Rint_A = 8000.0
 
 C_B = 3.3e-7
 RintB_min, RintB_max = 5000.0, 20000.0
@@ -50,7 +51,6 @@ change_interval = 0.150
 samples_per_change = int(change_interval*fs)
 
 mod_depth = 0.5
-
 use_square = False
 
 def soft_saturation(v, vmax, vmin, alpha):
@@ -77,11 +77,9 @@ for n in range(N):
     tau_B = Rint_B * C_B
     Vc_B += dir_B * dt / tau_B
     if Vc_B >= 1.0:
-        Vc_B = 1.0
-        dir_B = -1
+        Vc_B = 1.0; dir_B = -1
     elif Vc_B <= -1.0:
-        Vc_B = -1.0
-        dir_B = +1
+        Vc_B = -1.0; dir_B = +1
 
     Vdiff_B = Vc_B + rng.normal(0.0, vnoise_rms)
     dv_ol_B = omega_p*(A_ol_dc*Vdiff_B - v_ol_state_B)*dt
@@ -95,13 +93,15 @@ for n in range(N):
 
     Vc_A += dir_A * dt / tau_A
     if Vc_A >= 1.0:
-        Vc_A = 1.0
-        dir_A = -1
+        Vc_A = 1.0; dir_A = -1
     elif Vc_A <= -1.0:
-        Vc_A = -1.0
-        dir_A = +1
+        Vc_A = -1.0; dir_A = +1
 
-    Vdiff_A = Vc_A + rng.normal(0.0, vnoise_rms)
+    phase_offset = mod_depth * Vc_B
+    Vc_PM = Vc_A + phase_offset
+    Vc_PM = np.clip(Vc_PM, -1.0, 1.0)
+
+    Vdiff_A = Vc_PM + rng.normal(0.0, vnoise_rms)
     dv_ol_A = omega_p*(A_ol_dc*Vdiff_A - v_ol_state_A)*dt
     v_ol_state_A += dv_ol_A
     Vsat_A = soft_saturation(v_ol_state_A, Vout_max, Vout_min, soft_sat_alpha)
@@ -111,7 +111,7 @@ for n in range(N):
         y_out[n] = np.float32(Vout_A)
     else:
         amp_scale = Vout_max * 0.8
-        y_out[n] = np.float32(amp_scale * Vc_A)
+        y_out[n] = np.float32(amp_scale * Vc_PM)
 
 y_out *= 0.9/np.max(np.abs(y_out))
 
@@ -119,4 +119,4 @@ def float_to_pcm16(x):
     return np.int16(np.clip(x, -1.0, 1.0)*32767)
 
 audio = float_to_pcm16(y_out)
-write("fmvcap_opamp_vco.wav", fs, audio)
+write("pmvcap_opamp_vco.wav", fs, audio)
