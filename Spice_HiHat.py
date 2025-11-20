@@ -4,6 +4,8 @@ import numpy as np
 from scipy.io.wavfile import write
 import random
 
+random.seed(123)
+
 fs = 44100
 dt = 1.0 / fs
 duration = 5.0
@@ -41,7 +43,7 @@ trigger_interval = 0.150
 samples_per_trigger = int(trigger_interval * fs)
 
 rng = np.random.default_rng(123)
-random.seed(123)
+
 Vc_noise = 0.0
 x_prev_hpf = 0.0
 y_prev_hpf = 0.0
