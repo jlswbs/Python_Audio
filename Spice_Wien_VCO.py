@@ -1,4 +1,4 @@
-# Spice (opamp base) Wien bridge oscillator
+# Spice NE5532 (opamp base) Wien bridge oscillator
 
 import numpy as np
 import random
@@ -43,7 +43,7 @@ v_ol_state = 0.0
 bp = 1e-6
 lp = 0.0
 Q  = 1.0/np.sqrt(2.0)
-D  = 1.0/Q * 0.00001
+D  = 1.0/Q * 1e-5
 
 f_svf = 2.0*np.sin(np.pi*f0/fs)
 
